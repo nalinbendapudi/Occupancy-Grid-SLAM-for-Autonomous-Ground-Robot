@@ -37,6 +37,7 @@ private:
     const float  kMaxLaserDistance_;
     const int8_t kHitOdds_;
     const int8_t kMissOdds_;
+    pose_xyt_t last_pose;
     
     //////////////////// TODO: Add any private members needed for your occupancy grid mapping algorithm ///////////////
 };
