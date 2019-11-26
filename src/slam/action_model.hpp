@@ -32,7 +32,7 @@ public:
     /**
     * Constructor for ActionModel.
     */
-    ActionModel(void);
+    ActionModel(double k1, double k2);
     
     /**
     * updateAction sets up the motion model for the current update for the localization.
@@ -55,6 +55,16 @@ public:
     
 private:
     
+    pose_xyt_t last_pose;
+    std::random_device rd;
+    std::mt19937 gen;
+    std::normal_distribution<> e1;
+    std::normal_distribution<> e2;
+    std::normal_distribution<> e3;
+    double dtheta;
+    double k1;
+    double k2;
+    double k3;
     ////////// TODO: Add private member variables needed for you implementation ///////////////////
 };
 

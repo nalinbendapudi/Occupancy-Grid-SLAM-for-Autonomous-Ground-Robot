@@ -3,18 +3,28 @@
 #include <lcmtypes/pose_xyt_t.hpp>
 #include <cassert>
 
+#include <random>
+
+using namespace std;
 
 ParticleFilter::ParticleFilter(int numParticles)
-: kNumParticles_ (numParticles)
+    : kNumParticles_ (numParticles),
+    posterior_(numParticles, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {1.0 / numParticles}}),
+    gen(rd),
+    resample_offset_sampler(0.0, 1.0 / numParticles),
+    actionModel_(k1, k2)
 {
     assert(kNumParticles_ > 1);
-    posterior_.resize(kNumParticles_);
 }
 
 
 void ParticleFilter::initializeFilterAtPose(const pose_xyt_t& pose)
 {
     ///////////// TODO: Implement your method for initializing the particles in the particle filter /////////////////
+    for (auto& particle : posterior_) {
+        particle.pose = pose;
+    }
+    posteriorPose_ = pose;
 }
 
 
@@ -29,8 +39,8 @@ pose_xyt_t ParticleFilter::updateFilter(const pose_xyt_t&      odometry,
     if(hasRobotMoved)
     {
         auto prior = resamplePosteriorDistribution();
-        auto proposal = computeProposalDistribution(prior);
-        posterior_ = computeNormalizedPosterior(proposal, laser, map);
+        posterior_ = computeProposalDistribution(prior);
+        computeNormalizedPosterior(laser, map);
         posteriorPose_ = estimatePosteriorPose(posterior_);
     }
     
@@ -59,7 +69,23 @@ std::vector<particle_t> ParticleFilter::resamplePosteriorDistribution(void)
 {
     //////////// TODO: Implement your algorithm for resampling from the posterior distribution ///////////////////
     
-    std::vector<particle_t> prior;
+    vector<particle_t> prior;
+    prior.reserve(kNumParticles_);
+    // Select our random starting point
+    double target_total_weight = resample_offset_sampler();
+    double current_weight = 0.0;
+
+    auto current_particle = posterior_.cbegin();
+    while (prior.size() < kNumParticles_) {
+        while (current_weight < target_total_weight) {
+            current_weight += current_particle.weight;
+            assert(current_particle != posterior_.cend());
+            ++current_particle;
+        }
+        prior.push_back(*current_particle);
+        target_total_weight += 1.0 / kNumParticles_;
+    }
+
     return prior;
 }
 
@@ -68,24 +94,29 @@ std::vector<particle_t> ParticleFilter::computeProposalDistribution(const std::v
 {
     //////////// TODO: Implement your algorithm for creating the proposal distribution by sampling from the ActionModel
     std::vector<particle_t> proposal;
+    proposal.reserve(kNumParticles_);
+    for (const auto& particle : prior) {
+        proposal.push_back(actionModel_(particle));
+    }
+
     return proposal;
 }
 
 
-std::vector<particle_t> ParticleFilter::computeNormalizedPosterior(const std::vector<particle_t>& proposal,
-                                                                   const lidar_t& laser,
+std::vector<particle_t> ParticleFilter::computeNormalizedPosterior(const lidar_t& laser,
                                                                    const OccupancyGrid&   map)
 {
     /////////// TODO: Implement your algorithm for computing the normalized posterior distribution using the 
     ///////////       particles in the proposal distribution
-    std::vector<particle_t> posterior;
-    return posterior;
+    for (auto& particle : posterior_) {
+        particle.weight = sensorModel_(particle, laser, map);
+    }
 }
 
 
 pose_xyt_t ParticleFilter::estimatePosteriorPose(const std::vector<particle_t>& posterior)
 {
     //////// TODO: Implement your method for computing the final pose estimate based on the posterior distribution
-    pose_xyt_t pose;
+    pose_xyt_t pose = *std::max_element(posterior_.cbegin(), posterior_.cend(), [](const auto& a, const auto& b) { return a.weight < b.weight; });
     return pose;
 }

@@ -35,7 +35,7 @@ public:
     * \param    numParticles        Number of particles to use
     * \pre  numParticles > 1
     */
-    ParticleFilter(int numParticles);
+    ParticleFilter(int numParticles, double k1, double k2);
     
     /**
     * initializeFilterAtPose initializes the particle filter with the samples distributed according
@@ -84,10 +84,14 @@ private:
     
     std::vector<particle_t> resamplePosteriorDistribution(void);
     std::vector<particle_t> computeProposalDistribution(const std::vector<particle_t>& prior);
-    std::vector<particle_t> computeNormalizedPosterior(const std::vector<particle_t>& proposal,
+    void computeNormalizedPosterior(const std::vector<particle_t>& proposal,
                                                        const lidar_t& laser,
                                                        const OccupancyGrid&   map);
     pose_xyt_t estimatePosteriorPose(const std::vector<particle_t>& posterior);
+
+    std::random_device rd;
+    std::mt19937 gen;
+    std::uniform_real_distribution<> resample_offset_sampler;
 };
 
 #endif // SLAM_PARTICLE_FILTER_HPP
