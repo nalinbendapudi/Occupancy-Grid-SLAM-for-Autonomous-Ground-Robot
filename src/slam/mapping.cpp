@@ -9,7 +9,7 @@ Mapping::Mapping(float maxLaserDistance, int8_t hitOdds, int8_t missOdds)
 : kMaxLaserDistance_(maxLaserDistance)
 , kHitOdds_(hitOdds)
 , kMissOdds_(missOdds)
-, last_pose{ 0, 0, 0, 0 }
+, last_pose{ 0ul, 0.0, 0.0, 0.0 }
 {
 }
 

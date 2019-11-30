@@ -9,6 +9,8 @@
 OccupancyGridSLAM::OccupancyGridSLAM(int         numParticles,
                                      int8_t      hitOddsIncrease,
                                      int8_t      missOddsDecrease,
+                                     double k1,
+                                     double k2,
                                      lcm::LCM&   lcmComm,
                                      bool waitForOptitrack,
                                      bool mappingOnlyMode,
@@ -18,7 +20,7 @@ OccupancyGridSLAM::OccupancyGridSLAM(int         numParticles,
 , waitingForOptitrack_(waitForOptitrack)
 , haveMap_(false)
 , numIgnoredScans_(0)
-, filter_(numParticles)
+, filter_(numParticles, k1, k2)
 , map_(10.0f, 10.0f, 0.05f) //30,30,0.1  // create a 10m x 10m grid with 0.05m cells
 , mapper_(5.0f, hitOddsIncrease, missOddsDecrease)
 , lcm_(lcmComm)
