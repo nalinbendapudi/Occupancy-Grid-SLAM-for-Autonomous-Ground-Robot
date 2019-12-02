@@ -39,6 +39,8 @@ public:
     OccupancyGridSLAM(int numParticles, 
                       int8_t hitOddsIncrease, 
                       int8_t missOddsDecrease, 
+                      double k1,
+                      double k2,
                       lcm::LCM& lcmComm, 
                       bool waitForOptitrack,
                       bool mappingOnlyMode = false,

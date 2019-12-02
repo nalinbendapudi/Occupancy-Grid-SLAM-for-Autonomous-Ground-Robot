@@ -62,9 +62,9 @@ private:
     std::normal_distribution<> e2;
     std::normal_distribution<> e3;
     double dtheta;
+    double alpha;
     double k1;
     double k2;
-    double k3;
     ////////// TODO: Add private member variables needed for you implementation ///////////////////
 };
 

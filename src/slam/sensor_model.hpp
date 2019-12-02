@@ -37,7 +37,7 @@ public:
     double likelihood(const particle_t& particle, const lidar_t& scan, const OccupancyGrid& map);
 
 private:
-    
+    double fraction_for_adjacency = .8;
     ///////// TODO: Add any private members for your SensorModel ///////////////////
 };
 

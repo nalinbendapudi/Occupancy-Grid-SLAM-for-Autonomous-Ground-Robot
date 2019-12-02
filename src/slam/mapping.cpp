@@ -51,6 +51,11 @@ void Mapping::updateMap(const lidar_t& scan, const pose_xyt_t& pose, OccupancyGr
     int l0 = 0;
     MovingLaserScan lidar_rays = MovingLaserScan(scan, last_pose, pose);
     for (const adjusted_ray_t& ray : lidar_rays) {
+        // If a ray is out of range, just ignore it
+        // if (ray.range >= kMaxLaserDistance_)
+        // {
+        //     continue;
+        // }
         Point<float> vec { ray.range * std::cos(ray.theta), ray.range * std::sin(ray.theta) };
         Point<float> endpoint = ray.origin + vec;
         Point<int> ray_start_grid = global_position_to_grid_cell(ray.origin, map);

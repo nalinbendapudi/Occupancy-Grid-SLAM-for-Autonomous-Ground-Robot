@@ -74,24 +74,22 @@ public:
     
 private:
     
+    size_t kNumParticles_;         // Number of particles to use for estimating the pose
+
     std::vector<particle_t> posterior_;     // The posterior distribution of particles at the end of the previous update
     pose_xyt_t posteriorPose_;              // Pose estimate associated with the posterior distribution
     
     ActionModel actionModel_;   // Action model to apply to particles on each update
     SensorModel sensorModel_;   // Sensor model to compute particle weights
-    
-    int kNumParticles_;         // Number of particles to use for estimating the pose
-    
-    std::vector<particle_t> resamplePosteriorDistribution(void);
-    std::vector<particle_t> computeProposalDistribution(const std::vector<particle_t>& prior);
-    void computeNormalizedPosterior(const std::vector<particle_t>& proposal,
-                                                       const lidar_t& laser,
-                                                       const OccupancyGrid&   map);
-    pose_xyt_t estimatePosteriorPose(const std::vector<particle_t>& posterior);
 
     std::random_device rd;
     std::mt19937 gen;
     std::uniform_real_distribution<> resample_offset_sampler;
+    
+    std::vector<particle_t> resamplePosteriorDistribution(void);
+    std::vector<particle_t> computeProposalDistribution(const std::vector<particle_t>& prior);
+    void computeNormalizedPosterior(const lidar_t& laser, const OccupancyGrid& map);
+    pose_xyt_t estimatePosteriorPose(const std::vector<particle_t>& posterior);
 };
 
 #endif // SLAM_PARTICLE_FILTER_HPP
