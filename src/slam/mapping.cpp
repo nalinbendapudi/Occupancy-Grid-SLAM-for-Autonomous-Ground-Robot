@@ -38,6 +38,11 @@ static std::vector<Point<int>> bresenham(const Point<int>& start, const Point<in
             current.y += sy;
         }
     }
+    // add the actual endpoint
+    if (grid.isCellInGrid(current.x, current.y)) {
+        coords.push_back(current);
+
+    }
     return coords;
 }
 
