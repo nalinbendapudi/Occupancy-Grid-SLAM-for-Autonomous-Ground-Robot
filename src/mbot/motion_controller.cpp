@@ -71,11 +71,12 @@ public:
         const float kDGain = 0.0f;
         const float kIGain = 0.0003f;
 
-        const float kPTurnGain = 0.4f;
+        const float kPTurnGain = 0.8f;
         const float kDesiredSpeed = 0.2f;
         const float kMinSpeed = 0.1f;
-        const float kTurnSpeed = 1.0f;
-        const float kTurnMaxSpeed = 0.6f;
+        const float kTurnSpeed = 2.0f;
+        const float kTurnMaxSpeed = 1.0f;
+        const float kTurnMinSpeed = 1.0f;
         const float slowDownDistance = 0.4f;
         
         mbot_motor_command_t cmd;
@@ -131,9 +132,11 @@ public:
 
                         turnspeed = (error * kPGain) + (deltaError * kDGain) + (totalError_ * kIGain);
                         if (turnspeed >= 0) {
+                            turnspeed = std::max(turnspeed, kTurnMinSpeed);
                             turnspeed = std::min(turnspeed, kTurnMaxSpeed);
                         } else {
-                            turnspeed = std::max(-turnspeed, -kTurnMaxSpeed);
+                            turnspeed = std::min(turnspeed, -kTurnMinSpeed);
+                            turnspeed = std::max(turnspeed, -kTurnMaxSpeed); //INVESTIGATE
                         }
                     }
 
@@ -362,7 +365,7 @@ int main(int argc, char** argv)
 
     	if(controller.timesync_initialized()){
             	mbot_motor_command_t cmd = controller.updateCommand();
-
+                std::cout << "Turning Speed: " << cmd.angular_v << std::endl;
             	lcmInstance.publish(MBOT_MOTOR_COMMAND_CHANNEL, &cmd);
     	}
     }
