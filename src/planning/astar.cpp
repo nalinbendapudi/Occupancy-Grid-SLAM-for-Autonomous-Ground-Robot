@@ -45,8 +45,8 @@ robot_path_t search_for_path(pose_xyt_t start,
                     current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2)] = current_node.parent;
 
         // Goal check
-        if (sqrt((current_node.self.x - goal.x)*(current_node.self.x - goal.x)+ \
-            (current_node.self.y - goal.y)*(current_node.self.y - goal.y)) < 0.001)
+        if (std::sqrt((current_node.self.x - goal.x)*(current_node.self.x - goal.x)+ \
+            (current_node.self.y - goal.y)*(current_node.self.y - goal.y)) < distances.metersPerCell())
         {         
             std::cout << "reach goal" << std::endl;
             path.path.push_back(goal);
@@ -56,7 +56,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             pose_xyt_t current = current_node.self;
 
             // back trace to start
-            while (sqrt((current.x - start.x)*(current.x - start.x)+ \
+            while (std::sqrt((current.x - start.x)*(current.x - start.x)+ \
                     (current.y - start.y)*(current.y - start.y)) > 0.001)
             {
                 parent = closed_list[int(-current.y/distances.metersPerCell()+distances.heightInCells()/2)][int(current.x/distances.metersPerCell()+distances.widthInCells()/2)];
@@ -75,7 +75,7 @@ robot_path_t search_for_path(pose_xyt_t start,
             for(float y = current_node.self.y - distances.metersPerCell();y <= current_node.self.y + distances.metersPerCell(); y=y+distances.metersPerCell())
             {
                 // check if the child is current node
-                if (sqrt((current_node.self.x - x)*(current_node.self.x - x)+ \
+                if (std::sqrt((current_node.self.x - x)*(current_node.self.x - x)+ \
                          (current_node.self.y - y)*(current_node.self.y - y) < 0.001)){
                             // std::cout << "child is current node" << std::endl;
                             continue;
@@ -91,7 +91,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                 // check if the child is an obstacle
                 float obsDistance = distances(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
                     int(-y/distances.metersPerCell()+distances.heightInCells()/2));
-                if (obsDistance <= 1.5*params.minDistanceToObstacle){
+                if (obsDistance <= params.minDistanceToObstacle){
                     // std::cout << "child is an obstacle" << std::endl;
                     continue;
                 } 
@@ -110,8 +110,8 @@ robot_path_t search_for_path(pose_xyt_t start,
 
                 child.self = child_pose;
                 child.parent = current_node.self;
-                child.g = current_node.g + sqrt((x-current_node.self.x)*(x-current_node.self.x)+(y-current_node.self.y)*(y-current_node.self.y));
-                child.f = child.g + sqrt((x-goal.x)*(x-goal.x)+(y-goal.y)*(y-goal.y)) + \
+                child.g = current_node.g + std::sqrt((x-current_node.self.x)*(x-current_node.self.x)+(y-current_node.self.y)*(y-current_node.self.y));
+                child.f = child.g + std::sqrt((x-goal.x)*(x-goal.x)+(y-goal.y)*(y-goal.y)) + \
                             (obsDistance < params.maxDistanceWithCost) ? \
                             obsDistance + std::pow(params.maxDistanceWithCost - obsDistance, params.distanceCostExponent): obsDistance;
 
@@ -124,6 +124,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     
     path.utime = start.utime;    
     path.path_length = path.path.size();
+    std::cout << "length of A* path" << path.path_length << std::endl;
     return path;
 }
 

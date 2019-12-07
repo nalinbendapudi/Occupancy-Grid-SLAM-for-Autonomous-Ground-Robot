@@ -5,6 +5,7 @@
 #include <lcmtypes/robot_path_t.hpp>
 #include <cmath>
 
+#include <iostream>
 
 MotionPlanner::MotionPlanner(const MotionPlannerParams& params)
 : params_(params)
@@ -64,6 +65,7 @@ bool MotionPlanner::isValidGoal(const pose_xyt_t& goal) const
         // And is far enough from obstacles that the robot can physically occupy the space
         // Add an extra cell to account for discretization error and make motion a little safer by not trying to
         // completely snuggle up against the walls in the motion plan
+        std::cout << "distances to obstable: " << distances_(goalCell.x, goalCell.y) << std::endl;
         return distances_(goalCell.x, goalCell.y) > params_.robotRadius;
     }
     
@@ -76,11 +78,11 @@ bool MotionPlanner::isPathSafe(const robot_path_t& path) const
 {
 
     ///////////// TODO: Implement your test for a safe path here //////////////////
-    for (unsigned i=0; i<path.size(); i++){
-        pose_xyt_t pose = path[i];
-        int x = pose.x/distances_.metersPerCell_ + distances_.widthInCells()/2;
-        int y = pose.y/distances_.metersPerCell_ + distances_.heightInCells()/2;
-        if(distances_.distance(x, y) <= searchParams_.minDistanceToObstacle){
+    for (unsigned i=0; i< path.path.size(); i++){
+        pose_xyt_t pose = path.path[i];
+        int x = pose.x/distances_.metersPerCell() + distances_.widthInCells()/2;
+        int y = pose.y/distances_.metersPerCell() + distances_.heightInCells()/2;
+        if(distances_(x, y) <= searchParams_.minDistanceToObstacle){
             return false;
         }
     }
