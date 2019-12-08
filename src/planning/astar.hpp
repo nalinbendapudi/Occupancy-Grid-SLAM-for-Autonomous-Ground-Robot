@@ -35,6 +35,12 @@ struct Node
     double f; // total cost value, aka priority
 };
 
+struct compare_f{
+    bool operator()(const Node& a, const Node& b){
+        return a.f > b.f;
+    }
+};
+
 
 /**
 * search_for_path uses an A* search to find a path from the start to goal poses. The search assumes a circular robot
