@@ -3,9 +3,12 @@
 
 #include <lcmtypes/robot_path_t.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
+#include <common/point.hpp>
+#include <common/grid_utils.hpp>
 #include <algorithm>
 #include <cmath>
 #include <math.h>
+
 
 class ObstacleDistanceGrid;
 

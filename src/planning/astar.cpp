@@ -10,7 +10,36 @@ robot_path_t search_for_path(pose_xyt_t start,
 {
     ////////////////// TODO: Implement your A* search here //////////////////////////
     
-    // 3D configuration map for closed list
+    // check goal position
+
+    Point<double> global_origin_pose = distances.originInGlobalFrame();
+
+    // std::cout << "global origin: " << global_origin_pose.x << " , " << global_origin_pose.y << std::endl;
+
+    Point<double> goal_pos(goal.x,goal.y);
+    Point<int> goal_idx = global_position_to_grid_cell(goal_pos, distances);
+
+    // if (!distances.isCellInGrid(round(goal.x/distances.metersPerCell()+distances.widthInCells()/2), \
+    //                 round(-goal.y/distances.metersPerCell()+distances.heightInCells()/2))){
+    //                     std::cout << "goal is not in grid" << std::endl;
+    //                 }
+    
+    if (!distances.isCellInGrid(goal_idx.x, goal_idx.y)){
+                        std::cout << "goal is not in grid" << std::endl;
+                    } 
+
+    // check if the child is an obstacle
+    // float obsDistance = distances(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
+    //     int(-y/distances.metersPerCell()+distances.heightInCells()/2));
+    // float obsDistance = distances(round(goal.x/distances.metersPerCell()+distances.widthInCells()/2), \
+    //     round(-goal.y/distances.metersPerCell()+distances.heightInCells()/2));
+    float obsDistance = distances(goal_idx.x,goal_idx.y);
+    if (obsDistance <= params.minDistanceToObstacle){
+        std::cout << "goal too close to obstacle" << std::endl;
+    } 
+
+
+    // 2D configuration map for closed list
 
     pose_xyt_t initial;
     initial.utime = -1;
@@ -44,15 +73,28 @@ robot_path_t search_for_path(pose_xyt_t start,
         open_list.pop();
 
         // check if the current node has been explored
-        if (closed_list[int(-current_node.self.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int( \
-                    current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)].utime != -1){
+        // if (closed_list[int(-current_node.self.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int( \
+        //             current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)].utime != -1){
+        
+        // convert global coordinate to cell index
+        Point<double> current_node_pos(current_node.self.x,current_node.self.y);
+        Point<int> current_node_idx = global_position_to_grid_cell(current_node_pos, distances);
+
+        if (closed_list[current_node_idx.y][current_node_idx.x].utime != -1){
             // std::cout << "current has been explored" << std::endl;
             continue;
-        } 
+        }
+        
+        // if (closed_list[round(-current_node.self.y/distances.metersPerCell()+distances.heightInCells()/2)][round( \
+        //             current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2)].utime != -1){
+        //     // std::cout << "current has been explored" << std::endl;
+        //     continue;
+        // } 
 
         // insert current node to closed list
-        closed_list[int(-current_node.self.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int( \
-                    current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)] = current_node.parent;
+        // closed_list[int(-current_node.self.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int( \
+        //             current_node.self.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)] = current_node.parent;
+        closed_list[current_node_idx.y][current_node_idx.x] = current_node.parent;
 
         // Goal check
         if (sqrt((current_node.self.x - goal.x)*(current_node.self.x - goal.x)+ \
@@ -65,15 +107,25 @@ robot_path_t search_for_path(pose_xyt_t start,
             pose_xyt_t parent;
             pose_xyt_t current = current_node.self;
 
+            std::cout << "back track start" << std::endl;
+
             // back trace to start
             while (sqrt((current.x - start.x)*(current.x - start.x)+ \
                     (current.y - start.y)*(current.y - start.y)) > 0.001)
             {
-                parent = closed_list[int(-current.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int(current.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)];
+                // parent = closed_list[int(-current.y/distances.metersPerCell()+distances.heightInCells()/2+0.5)][int(current.x/distances.metersPerCell()+distances.widthInCells()/2+0.5)];
+                // parent = closed_list[round(-current.y/distances.metersPerCell()+distances.heightInCells()/2)][round(current.x/distances.metersPerCell()+distances.widthInCells()/2)];
+                
+                Point<double> current_pos(current.x,current.y);
+                Point<int> current_idx = global_position_to_grid_cell(current_pos, distances);
+                parent = closed_list[current_idx.y][current_idx.x];
+                
                 parent.theta = atan2(current.y - parent.y, current.x - parent.x);
                 path.path.push_back(parent);
                 current = parent;
             }
+
+            std::cout << "back track end" << std::endl;
 
             std::reverse(path.path.begin(),path.path.end());
             break;
@@ -85,6 +137,10 @@ robot_path_t search_for_path(pose_xyt_t start,
         {
             for(float y = current_node.self.y - distances.metersPerCell();y <= current_node.self.y + distances.metersPerCell(); y=y+distances.metersPerCell())
             {
+                // convert global coordinate to cell index
+                Point<double> pos(x,y);
+                Point<int> idx = global_position_to_grid_cell(pos, distances);
+
                 // check if the child is current node
                 if (sqrt((current_node.self.x - x)*(current_node.self.x - x)+ \
                          (current_node.self.y - y)*(current_node.self.y - y) < 0.001)){
@@ -93,15 +149,17 @@ robot_path_t search_for_path(pose_xyt_t start,
                          } 
 
                 // check if the child is in grid
-                if (!distances.isCellInGrid(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
-                    int(-y/distances.metersPerCell()+distances.heightInCells()/2))){
+                // if (!distances.isCellInGrid(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
+                //     int(-y/distances.metersPerCell()+distances.heightInCells()/2))){
+                if (!distances.isCellInGrid(idx.x,idx.y)){
                         // std::cout << "child is not in grid" << std::endl;
                         continue;
                     } 
 
                 // check if the child is an obstacle
-                float obsDistance = distances(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
-                    int(-y/distances.metersPerCell()+distances.heightInCells()/2));
+                // float obsDistance = distances(int(x/distances.metersPerCell()+distances.widthInCells()/2), \
+                //     int(-y/distances.metersPerCell()+distances.heightInCells()/2));
+                float obsDistance = distances(idx.x,idx.y);
                 if (obsDistance <= params.minDistanceToObstacle){
                     // std::cout << "child is an obstacle" << std::endl;
                     continue;
