@@ -12,6 +12,7 @@
 #include <lcm/lcm-cpp.hpp>
 #include <mutex>
 #include <set>
+#include <cstdlib>
 
 /**
 * Exploration runs a simple state machine to explore -- and possibly escape from -- an environment. The state machine

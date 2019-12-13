@@ -245,6 +245,23 @@ int8_t Exploration::executeExploringMap(bool initialize)
     */
     
     /////////////////////////////// End student code ///////////////////////////////
+
+    // update distance map frontier
+    planner_.setMap(currentMap_);
+    frontiers_ = find_map_frontiers(currentMap_,currentPose_);
+    
+    if(!frontiers_.empty()){
+        std::cout << "frontier not empty" << std::endl;
+
+        // // choose an arbitrary frontier point to start from
+        // frontier_t rand_frontier = frontiers_[rand()%(frontiers_.size())];
+        // Point<float> rand_point = rand_frontier.cells[rand()%(rand_frontier.cells.size())];
+        // std::cout << "frontier point: " << rand_point.x << " , " << rand_point.y << std::endl;
+
+        // plan the path to frontier
+        currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
+    }
+
     
     /////////////////////////   Create the status message    //////////////////////////
     exploration_status_t status;
