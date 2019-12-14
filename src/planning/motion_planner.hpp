@@ -151,6 +151,9 @@ public:
     // A new function for planning a path to free space near a given frontier point
     robot_path_t planPathToFrontier(std::vector<frontier_t> frontier, pose_xyt_t& start, pose_xyt_t& goal);
 
+    // A new function for planning a path back home
+    robot_path_t planPathBackHome(pose_xyt_t& start, pose_xyt_t& goal);
+
 private:
     
     ObstacleDistanceGrid distances_;

@@ -187,6 +187,7 @@ void Exploration::executeStateMachine(void)
             std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
         }std::cout << "\n";
 
+
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
     }
 
@@ -249,8 +250,11 @@ int8_t Exploration::executeExploringMap(bool initialize)
     // update distance map frontier
     planner_.setMap(currentMap_);
     frontiers_ = find_map_frontiers(currentMap_,currentPose_);
+
+    // std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
     
     if(!frontiers_.empty()){
+        prev_frontier_size = frontiers_.size();
         std::cout << "frontier not empty" << std::endl;
 
         // // choose an arbitrary frontier point to start from
@@ -259,9 +263,11 @@ int8_t Exploration::executeExploringMap(bool initialize)
         // std::cout << "frontier point: " << rand_point.x << " , " << rand_point.y << std::endl;
 
         // plan the path to frontier
-        currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
+        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.1){
+            currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
+        }
+        
     }
-
     
     /////////////////////////   Create the status message    //////////////////////////
     exploration_status_t status;
@@ -270,7 +276,8 @@ int8_t Exploration::executeExploringMap(bool initialize)
     status.state = exploration_status_t::STATE_EXPLORING_MAP;
     
     // If no frontiers remain, then exploration is complete
-    if(frontiers_.empty())
+    if(frontiers_.empty() && sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.1)
+    // if(frontiers_.empty())
     {
         status.status = exploration_status_t::STATUS_COMPLETE;
     }
@@ -318,8 +325,14 @@ int8_t Exploration::executeReturningHome(bool initialize)
     *       (1) dist(currentPose_, targetPose_) < kReachedPositionThreshold  :  reached the home pose
     *       (2) currentPath_.path_length > 1  :  currently following a path to the home pose
     */
-    
 
+
+    // std::cout << "Returning Home Now!!!!!" << std::endl;
+
+    while(!returnHome){
+        currentPath_ = planner_.planPathBackHome(currentPose_,homePose_);
+        returnHome = true;
+    }
 
     /////////////////////////////// End student code ///////////////////////////////
     

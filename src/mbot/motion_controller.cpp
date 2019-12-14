@@ -72,7 +72,7 @@ public:
         const float kIGain = 0.0003f;
 
         const float kPTurnGain = 0.8f;
-        const float kDesiredSpeed = 0.2f;
+        const float kDesiredSpeed = 1.0f;
         const float kMinSpeed = 0.1f;
         const float kTurnSpeed = 2.0f;
         const float kTurnMaxSpeed = 1.0f;
@@ -365,7 +365,7 @@ int main(int argc, char** argv)
 
     	if(controller.timesync_initialized()){
             	mbot_motor_command_t cmd = controller.updateCommand();
-                std::cout << "Turning Speed: " << cmd.angular_v << std::endl;
+                // std::cout << "Turning Speed: " << cmd.angular_v << std::endl;
             	lcmInstance.publish(MBOT_MOTOR_COMMAND_CHANNEL, &cmd);
     	}
     }
