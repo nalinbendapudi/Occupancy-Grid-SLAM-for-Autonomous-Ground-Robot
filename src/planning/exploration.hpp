@@ -8,6 +8,8 @@
 #include <lcmtypes/exploration_status_t.hpp>
 #include <lcmtypes/pose_xyt_t.hpp>
 #include <lcmtypes/robot_path_t.hpp>
+#include <lcmtypes/mbot_arm_block_list_t.hpp>
+#include <lcmtypes/mbot_arm_cmd_t.hpp>
 #include <lcmtypes/message_received_t.hpp>
 #include <lcm/lcm-cpp.hpp>
 #include <mutex>
@@ -72,6 +74,9 @@ public:
     void handleMap(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const occupancy_grid_t* map);
     void handlePose(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const pose_xyt_t* pose);
     void handleConfirmation(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const message_received_t* confirm);
+    void handleBlockList(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_list_t* blocks);
+    void lookForBlocks(bool in_range);
+    void grabBlock();
 
 private:
     
@@ -125,6 +130,8 @@ private:
     int8_t executeReturningHome(bool initialize);
     int8_t executeCompleted(bool initialize);
     int8_t executeFailed(bool initialize);
+    bool waiting_for_all_blocks;
+    bool waiting_for_close_blocks;
     
     /////////// TODO: Add any additional methods you might need here //////////////
     

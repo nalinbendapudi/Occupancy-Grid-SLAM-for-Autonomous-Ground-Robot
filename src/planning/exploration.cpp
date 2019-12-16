@@ -29,12 +29,15 @@ Exploration::Exploration(int32_t teamNumber,
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
 , pathReceived_(false)
+, waiting_for_all_blocks(false)
+, waiting_for_close_blocks(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
     lcmInstance_->subscribe(SLAM_MAP_CHANNEL, &Exploration::handleMap, this);
     lcmInstance_->subscribe(SLAM_POSE_CHANNEL, &Exploration::handlePose, this);
     lcmInstance_->subscribe(MESSAGE_CONFIRMATION_CHANNEL, &Exploration::handleConfirmation, this);
+    lcmInstance_->subscribe(BLOCK_LIST_CHANNEL, &Exploration::handleBlockList, this);
     
     // Send an initial message indicating that the exploration module is initializing. Once the first map and pose are
     // received, then it will change to the exploring map state.
@@ -71,6 +74,59 @@ bool Exploration::exploreEnvironment()
     
     // If the state is completed, then we didn't fail
     return state_ == exploration_status_t::STATE_COMPLETED_EXPLORATION;
+}
+
+void Exploration::lookForBlocks(bool in_range) {
+    mbot_arm_cmd_t cmd;
+    cmd.utime = 0;
+    if (in_range) {
+        cmd.mbot_cmd = mbot_arm_cmd_t::DETECT_BLOCK_IN_RANGE;
+    } else {
+        cmd.mbot_cmd = mbot_arm_cmd_t::DETECT_BLOCKS;
+    }
+
+    lcmInstance_->publish(ARM_CMD_CHANNEL, &cmd);
+
+    if (in_range) {
+        waiting_for_close_blocks = true;
+        while (waiting_for_close_blocks) {
+            usleep(10000);
+        }
+    } else {
+        waiting_for_all_blocks = true;
+        while (waiting_for_all_blocks) {
+            usleep(10000);
+        }
+    }
+}
+
+void Exploration::grabBlock() {
+    // TODO have some logic to ensure that we only grab when ready
+    mbot_arm_cmd_t grab_cmd;
+    grab_cmd.utime = 0;
+    grab_cmd.mbot_cmd = mbot_arm_cmd_t::ATTEMPT_GRASP;
+
+    waiting_for_close_blocks = true;
+    lcmInstance_->publish(ARM_CMD_CHANNEL, &grab_cmd);
+    while (waiting_for_close_blocks) {
+        usleep(10000);
+    }
+}
+
+void Exploration::handleBlockList(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_list_t* block_list) {
+    // TODO this is called when we get a response from DETECT_BLOCKS.
+    // in here, we should store all blocks that we received in world coordinates somewhere (and then go to those coordinates)
+    if (waiting_for_all_blocks) {
+        waiting_for_all_blocks = false;
+        for (const mbot_arm_block_t &block : block_list->blocks) {
+
+        }
+    }
+    // TODO this is called when we get a response from DETECT_BLOCKS_IN_RANGE or from ATTEMPT_GRAB. We may need to add additional logic
+    if (waiting_for_close_blocks) {
+        waiting_for_close_blocks = false;
+
+    }
 }
 
 void Exploration::handleMap(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const occupancy_grid_t* map)
