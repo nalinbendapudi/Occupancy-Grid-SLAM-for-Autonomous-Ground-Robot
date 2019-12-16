@@ -182,9 +182,10 @@ robot_path_t search_for_path(pose_xyt_t start,
                 child.g = current_node.g + sqrt((x-current_node.self.x)*(x-current_node.self.x)+(y-current_node.self.y)*(y-current_node.self.y));
                 child.f = child.g + sqrt((x-goal.x)*(x-goal.x)+(y-goal.y)*(y-goal.y));
 
-                // obs_cost = (obsDistance < params.maxDistanceWithCost) ? \
+                // double obs_cost = (obsDistance < params.maxDistanceWithCost) ? \
                 //             (obsDistance + std::pow(params.maxDistanceWithCost - obsDistance, params.distanceCostExponent)) : obsDistance;
-                // child.f += obs_cost;
+                double obs_cost = (obsDistance < params.maxDistanceWithCost) ? 10*(params.maxDistanceWithCost-obsDistance) : 10*(obsDistance-params.maxDistanceWithCost);
+                child.f += obs_cost;
 
                 // std::cout << "add child" << std::endl;
                 open_list.push(child);
