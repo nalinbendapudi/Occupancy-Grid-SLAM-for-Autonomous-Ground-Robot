@@ -62,4 +62,8 @@ robot_path_t search_for_path(pose_xyt_t start,
 
 void round_theta(float& theta);
 
+bool isObstacleMiddle(const pose_xyt_t& start, const pose_xyt_t& end, const ObstacleDistanceGrid& distances, const SearchParams& params);
+static std::vector<Point<int>> bresenham(const Point<int>& start, const Point<int>& end, const ObstacleDistanceGrid& distances);
+
+
 #endif // PLANNING_ASTAR_HPP

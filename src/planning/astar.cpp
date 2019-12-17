@@ -119,7 +119,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                 Point<double> current_pos(current.x,current.y);
                 Point<int> current_idx = global_position_to_grid_cell(current_pos, distances);
                 parent = closed_list[current_idx.y][current_idx.x];
-                
+
                 parent.theta = atan2(current.y - parent.y, current.x - parent.x);
                 path.path.push_back(parent);
                 current = parent;
@@ -184,7 +184,7 @@ robot_path_t search_for_path(pose_xyt_t start,
 
                 // double obs_cost = (obsDistance < params.maxDistanceWithCost) ? \
                 //             (obsDistance + std::pow(params.maxDistanceWithCost - obsDistance, params.distanceCostExponent)) : obsDistance;
-                double obs_cost = (obsDistance < params.maxDistanceWithCost) ? 10*(params.maxDistanceWithCost-obsDistance) : 10*(obsDistance-params.maxDistanceWithCost);
+                double obs_cost = (obsDistance < params.maxDistanceWithCost+0.05) ? 10*(params.maxDistanceWithCost+0.05-obsDistance) : 10*(obsDistance-(params.maxDistanceWithCost+0.05));
                 child.f += obs_cost;
 
                 // std::cout << "add child" << std::endl;
@@ -197,7 +197,42 @@ robot_path_t search_for_path(pose_xyt_t start,
     path.utime = start.utime;    
     path.path_length = path.path.size();
     std::cout << "length of A* path: " << path.path_length << std::endl;
-    return path;
+
+    // return path;
+
+
+
+    // Simplify the astar path by skipping unnecessary poses which is in a line.
+
+    // create a simplified path.
+    robot_path_t simp_path;
+    simp_path.path.push_back(path.path[0]);
+    pose_xyt_t startPose = path.path[0];
+    pose_xyt_t endPose;
+    bool addPose = false;
+    for (int i=2; i<path.path_length; i++){
+        endPose = path.path[i];
+
+        // check if the start and end has obstacle in between.
+        addPose = isObstacleMiddle(startPose, endPose, distances, params);
+
+        // If line between current pose and previous pose cross no obstacle, just skip this pose. 
+        if (addPose){
+            simp_path.path.push_back(path.path[i-1]);
+            startPose = path.path[i-1];
+        }
+        
+        // Add the last pose.
+        if(i == path.path_length-1) {
+            simp_path.path.push_back(path.path[i]);
+        }
+    }
+
+    simp_path.path_length = simp_path.path.size();
+    std::cout << "length of A* shortened path: " << simp_path.path_length << std::endl;
+
+
+    return simp_path;
 }
 
 bool operator < (const Node& a, const Node& b) {
@@ -212,4 +247,58 @@ void round_theta(float& theta)
     if(theta > 2 * M_PI){
         theta -= 2 * M_PI;
     }
+}
+
+
+bool isObstacleMiddle(const pose_xyt_t& start, const pose_xyt_t& end, const ObstacleDistanceGrid& distances, const SearchParams& params) {
+    
+    Point<int> start_idx = global_position_to_grid_cell(Point<double>(start.x,start.y), distances);
+    Point<int> end_idx = global_position_to_grid_cell(Point<double>(end.x,end.y), distances);
+    
+    std::vector<Point<int>> bresenham_path = bresenham(start_idx, end_idx, distances);
+    for (auto it = bresenham_path.cbegin(); it < bresenham_path.cend() - 1; ++it) {
+        const Point<int> grid_cell = *it;
+
+        // Check if there is obstacle in the middle.
+        float obsDistance = distances(grid_cell.x,grid_cell.y);
+        if (obsDistance <= params.minDistanceToObstacle){
+            return true;
+        }
+
+    }
+    return false;
+}
+
+
+static std::vector<Point<int>> bresenham(const Point<int>& start, const Point<int>& end, const ObstacleDistanceGrid& distances)
+{
+    std::vector<Point<int>> coords;
+    int dx = std::abs(end.x - start.x);
+    int dy = std::abs(end.y - start.y);
+    int sx = start.x < end.x ? 1 : -1;
+    int sy = start.y < end.y ? 1 : -1;
+    int err = dx - dy;
+    Point<int> current = start;
+
+    while (distances.isCellInGrid(current.x, current.y) && (current.x != end.x || current.y != end.y))
+    {
+        coords.push_back(current);
+        int e2 = 2 * err;
+        if (e2 >= -dy)
+        {
+            err -= dy;
+            current.x += sx;
+        }
+        if (e2 <= dx)
+        {
+            err += dx;
+            current.y += sy;
+        }
+    }
+    // add the actual endpoint
+    if (distances.isCellInGrid(current.x, current.y)) {
+        coords.push_back(current);
+
+    }
+    return coords;
 }
