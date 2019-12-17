@@ -1,0 +1,9 @@
+struct mbot_arm_cmd_t
+{
+    int64_t utime;
+    const int8_t SYSTEM_IDLE = 0;
+    const int8_t DETECT_BLOCKS = 1;
+    const int8_t DETECT_BLOCK_IN_RANGE = 2;
+    const int8_t ATTEMPT_GRASP = 3;
+    int8_t mbot_cmd;
+}

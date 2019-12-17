@@ -1,0 +1,6 @@
+struct mbot_arm_block_list_t
+{
+    int64_t utime;
+    int8_t num_blocks;
+    mbot_arm_block_t blocks[num_blocks];
+}

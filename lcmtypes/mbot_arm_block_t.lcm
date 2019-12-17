@@ -1,0 +1,6 @@
+struct mbot_arm_block_t
+{
+    int8_t tag_id;
+    pose_xyt_t pose;
+
+}
