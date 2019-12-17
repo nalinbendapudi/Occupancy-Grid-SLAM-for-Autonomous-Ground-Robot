@@ -118,8 +118,9 @@ void Exploration::handleBlockList(const lcm::ReceiveBuffer* rbuf, const std::str
     // in here, we should store all blocks that we received in world coordinates somewhere (and then go to those coordinates)
     if (waiting_for_all_blocks) {
         waiting_for_all_blocks = false;
+        std::cout << "got block list" << std::endl;
         for (const mbot_arm_block_t &block : block_list->blocks) {
-
+            std::cout << "(" << block.pose.x << " , " << block.pose.y << ")" << std::endl;
         }
     }
     // TODO this is called when we get a response from DETECT_BLOCKS_IN_RANGE or from ATTEMPT_GRAB. We may need to add additional logic
@@ -320,6 +321,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
 
         // plan the path to frontier
         if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.1){
+            lookForBlocks(false);
             currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
         }
         
