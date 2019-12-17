@@ -31,6 +31,7 @@ Exploration::Exploration(int32_t teamNumber,
 , pathReceived_(false)
 , waiting_for_all_blocks(false)
 , waiting_for_close_blocks(false)
+, waiting_for_arm(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
@@ -106,9 +107,9 @@ void Exploration::grabBlock() {
     grab_cmd.utime = 0;
     grab_cmd.mbot_cmd = mbot_arm_cmd_t::ATTEMPT_GRASP;
 
-    waiting_for_close_blocks = true;
+    waiting_for_arm = true;
     lcmInstance_->publish(ARM_CMD_CHANNEL, &grab_cmd);
-    while (waiting_for_close_blocks) {
+    while (waiting_for_arm) {
         usleep(10000);
     }
 }
@@ -120,13 +121,37 @@ void Exploration::handleBlockList(const lcm::ReceiveBuffer* rbuf, const std::str
         waiting_for_all_blocks = false;
         std::cout << "got block list" << std::endl;
         for (const mbot_arm_block_t &block : block_list->blocks) {
+            pose_xyt_t robot_frame_block_pose;
+            robot_frame_block_pose.utime = 0;
+            robot_frame_block_pose.x = currentPose_.x + std::cos(currentPose_.theta) * block.pose.x;
+            robot_frame_block_pose.y = currentPose_.y + std::sin(currentPose_.theta) * block.pose.y;
+            robot_frame_block_pose.theta = 0;
+            known_blocks[block.tag_id] = robot_frame_block_pose;
             std::cout << "(" << block.pose.x << " , " << block.pose.y << ")" << std::endl;
         }
     }
     // TODO this is called when we get a response from DETECT_BLOCKS_IN_RANGE or from ATTEMPT_GRAB. We may need to add additional logic
     if (waiting_for_close_blocks) {
         waiting_for_close_blocks = false;
+        nearbyBlocks = block_list->blocks;
+    }
+    if (waiting_for_arm) {
+        if (block_list->blocks.size() == nearbyBlocks.size()) {
+            mbot_arm_cmd_t grab_cmd;
+            grab_cmd.utime = 0;
+            grab_cmd.mbot_cmd = mbot_arm_cmd_t::ATTEMPT_GRASP;
 
+            waiting_for_arm = true;
+            lcmInstance_->publish(ARM_CMD_CHANNEL, &grab_cmd);
+        } else {
+            // TODO this will only work if only one block is in this picture
+            if (nearbyBlocks.size() > 1) {
+                std::cout << "You gotta write code to handle the multiple block case" << std::endl;
+            }
+            known_blocks.erase(nearbyBlocks[0].tag_id);
+            waiting_for_arm = false;
+        }
+        // TODO now we need to drive back and drop off
     }
 }
 

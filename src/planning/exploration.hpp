@@ -15,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include <cstdlib>
+#include <unordered_map>
 
 /**
 * Exploration runs a simple state machine to explore -- and possibly escape from -- an environment. The state machine
@@ -111,6 +112,8 @@ private:
     
     pose_xyt_t   currentTarget_;    // Current target robot is driving to
     OccupancyGrid exploredMap_;     // Map found after completing the RETURNING_HOME state
+
+    std::unordered_map<int8_t, pose_xyt_t> known_blocks;
     
     size_t prev_frontier_size = 0;
     bool pathReceived_;
@@ -125,6 +128,7 @@ private:
     void copyDataForUpdate(void);
     
     void   executeStateMachine(void);
+    std::vector<mbot_arm_block_t> nearbyBlocks;
     int8_t executeInitializing(void);
     int8_t executeExploringMap(bool initialize);
     int8_t executeReturningHome(bool initialize);
@@ -132,6 +136,7 @@ private:
     int8_t executeFailed(bool initialize);
     bool waiting_for_all_blocks;
     bool waiting_for_close_blocks;
+    bool waiting_for_arm;
     
     /////////// TODO: Add any additional methods you might need here //////////////
     
