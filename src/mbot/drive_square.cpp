@@ -63,6 +63,8 @@ int main(int argc, char** argv)
     nextPose.theta = 0.0f;
     path.path.insert(path.path.begin(), nextPose);
     
+    path.path.push_back(nextPose);
+    
     path.path_length = path.path.size();
     
     lcm::LCM lcmInstance(MULTICAST_URL);

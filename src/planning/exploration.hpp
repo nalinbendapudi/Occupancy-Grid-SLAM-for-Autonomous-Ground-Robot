@@ -114,6 +114,8 @@ private:
     OccupancyGrid exploredMap_;     // Map found after completing the RETURNING_HOME state
 
     std::unordered_map<int8_t, pose_xyt_t> known_blocks;
+    bool picking_block;
+    bool putting_block;
     
     size_t prev_frontier_size = 0;
     bool pathReceived_;
@@ -130,6 +132,7 @@ private:
     void   executeStateMachine(void);
     std::vector<mbot_arm_block_t> nearbyBlocks;
     int8_t executeInitializing(void);
+    // int8_t executePickingBlock(bool initialize);
     int8_t executeExploringMap(bool initialize);
     int8_t executeReturningHome(bool initialize);
     int8_t executeCompleted(bool initialize);
