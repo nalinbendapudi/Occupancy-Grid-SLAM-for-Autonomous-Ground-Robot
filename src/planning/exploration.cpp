@@ -254,11 +254,11 @@ void Exploration::executeStateMachine(void)
 
         std::cout << "INFO: Exploration: A new path was created on this iteration. Sending to Mbot:\n";
 
-        std::cout << "path timestamp: " << currentPath_.utime << "\npath: ";
+        // std::cout << "path timestamp: " << currentPath_.utime << "\npath: ";
 
-        for(auto pose : currentPath_.path){
-            std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
-        }std::cout << "\n";
+        // for(auto pose : currentPath_.path){
+        //     std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
+        // }std::cout << "\n";
 
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
 
@@ -319,8 +319,10 @@ int8_t Exploration::executeExploringMap(bool initialize)
         // Point<float> rand_point = rand_frontier.cells[rand()%(rand_frontier.cells.size())];
         // std::cout << "frontier point: " << rand_point.x << " , " << rand_point.y << std::endl;
 
+        // currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
+
         // plan the path to frontier
-        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.1){
+        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.4){
             lookForBlocks(false);
             currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
         }

@@ -100,14 +100,14 @@ robot_path_t search_for_path(pose_xyt_t start,
         if (sqrt((current_node.self.x - goal.x)*(current_node.self.x - goal.x)+ \
             (current_node.self.y - goal.y)*(current_node.self.y - goal.y)) < distances.metersPerCell())
         {         
-            std::cout << "reach goal" << std::endl;
+            // std::cout << "reach goal" << std::endl;
             path.path.push_back(goal);
 
             // parent node
             pose_xyt_t parent;
             pose_xyt_t current = current_node.self;
 
-            std::cout << "back track start" << std::endl;
+            // std::cout << "back track start" << std::endl;
 
             // back trace to start
             while (sqrt((current.x - start.x)*(current.x - start.x)+ \
@@ -125,7 +125,7 @@ robot_path_t search_for_path(pose_xyt_t start,
                 current = parent;
             }
 
-            std::cout << "back track end" << std::endl;
+            // std::cout << "back track end" << std::endl;
 
             std::reverse(path.path.begin(),path.path.end());
             break;
@@ -184,7 +184,7 @@ robot_path_t search_for_path(pose_xyt_t start,
 
                 // double obs_cost = (obsDistance < params.maxDistanceWithCost) ? \
                 //             (obsDistance + std::pow(params.maxDistanceWithCost - obsDistance, params.distanceCostExponent)) : obsDistance;
-                double obs_cost = (obsDistance < params.maxDistanceWithCost+0.05) ? 10*(params.maxDistanceWithCost+0.05-obsDistance) : 10*(obsDistance-(params.maxDistanceWithCost+0.05));
+                double obs_cost = (obsDistance < params.maxDistanceWithCost+0.1) ? 10*(params.maxDistanceWithCost+0.1-obsDistance) : 10*(obsDistance-(params.maxDistanceWithCost+0.1));
                 child.f += obs_cost;
 
                 // std::cout << "add child" << std::endl;
@@ -196,7 +196,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     
     path.utime = start.utime;    
     path.path_length = path.path.size();
-    std::cout << "length of A* path: " << path.path_length << std::endl;
+    // std::cout << "length of A* path: " << path.path_length << std::endl;
 
     // return path;
 
@@ -229,7 +229,7 @@ robot_path_t search_for_path(pose_xyt_t start,
     }
 
     simp_path.path_length = simp_path.path.size();
-    std::cout << "length of A* shortened path: " << simp_path.path_length << std::endl;
+    // std::cout << "length of A* shortened path: " << simp_path.path_length << std::endl;
 
 
     return simp_path;
@@ -261,7 +261,7 @@ bool isObstacleMiddle(const pose_xyt_t& start, const pose_xyt_t& end, const Obst
 
         // Check if there is obstacle in the middle.
         float obsDistance = distances(grid_cell.x,grid_cell.y);
-        if (obsDistance <= params.minDistanceToObstacle){
+        if (obsDistance <= params.minDistanceToObstacle + 0.1){
             return true;
         }
 

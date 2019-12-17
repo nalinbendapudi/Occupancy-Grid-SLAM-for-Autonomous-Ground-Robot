@@ -166,7 +166,7 @@ robot_path_t MotionPlanner::planPathToFrontier(std::vector<frontier_t> frontier,
                         }
 
                         // check if the cell is in free space 
-                        if (distances_(x_search,y_search) > 0.2){
+                        if (distances_(x_search,y_search) >= 0.3){
                             
                             // try to plan a path to it 
                             Point<double> goal_point = grid_position_to_global_position(Point<double>(x_search,y_search),distances_);
@@ -196,9 +196,9 @@ robot_path_t MotionPlanner::planPathToFrontier(std::vector<frontier_t> frontier,
         if (*std::min_element(explored.begin(), explored.end())) stop = 1;
     }
 
-    std::cout << "path length: " << path.path_length << std::endl;
-    std::cout << "start: " << start.x << " , " << start.y << std::endl;
-    std::cout << "goal: " << goal.x << " , " << goal.y << std::endl;
+    // std::cout << "path length: " << path.path_length << std::endl;
+    // std::cout << "start: " << start.x << " , " << start.y << std::endl;
+    // std::cout << "goal: " << goal.x << " , " << goal.y << std::endl;
 
     return path;
             
@@ -237,11 +237,11 @@ robot_path_t MotionPlanner::planPathBackHome(pose_xyt_t& start, pose_xyt_t& goal
 
         path = planPath(start,goal);
         
-        std::cout << "find viable path" << std::endl;
+        // std::cout << "find viable path" << std::endl;
 
-        std::cout << "path length: " << path.path_length << std::endl;
-        std::cout << "start: " << start.x << " , " << start.y << std::endl;
-        std::cout << "goal: " << goal.x << " , " << goal.y << std::endl;
+        // std::cout << "path length: " << path.path_length << std::endl;
+        // std::cout << "start: " << start.x << " , " << start.y << std::endl;
+        // std::cout << "goal: " << goal.x << " , " << goal.y << std::endl;
 
         return path;
     }
