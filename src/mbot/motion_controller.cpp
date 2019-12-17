@@ -72,7 +72,7 @@ public:
         const float kIGain = 0.0003f;
 
         const float kPTurnGain = 0.8f;
-        const float kDesiredSpeed = 1.0f;
+        const float kDesiredSpeed = 0.2f;
         const float kMinSpeed = 0.1f;
         const float kTurnSpeed = 2.0f;
         const float kTurnMaxSpeed = 1.0f;
@@ -280,7 +280,7 @@ private:
 	    const float kFinalPosTolerance = 0.05f;
 
         //tolerance for intermediate waypoints can be more lenient
-    	float tolerance = (targets_.size() == 1) ? kFinalPosTolerance : kPosTolerance;
+    	float tolerance = (targets_.size() <= 2) ? kFinalPosTolerance : kPosTolerance;
         
         // There's no target, so we're there by default.
         if(targets_.empty())

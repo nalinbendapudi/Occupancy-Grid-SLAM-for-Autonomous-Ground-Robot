@@ -55,15 +55,14 @@ int main(int argc, char** argv)
     }
     
     // Return to original heading after completing all circuits
-//    nextPose.theta = 0.0f;
-//    path.path.push_back(nextPose);
+    nextPose.theta = 0.0f;
+    nextPose.x = 0.1;
+    path.path.push_back(nextPose);
     
     nextPose.x = 0.0f;
     nextPose.y = 0.0f;
     nextPose.theta = 0.0f;
     path.path.insert(path.path.begin(), nextPose);
-    
-    path.path.push_back(nextPose);
     
     path.path_length = path.path.size();
     
