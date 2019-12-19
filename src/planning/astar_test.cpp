@@ -2,6 +2,8 @@
 #include <common/timestamp.h>
 #include <planning/motion_planner.hpp>
 #include <slam/occupancy_grid.hpp>
+#include <lcm/lcm-cpp.hpp>
+#include <common/getopt.h>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/max.hpp>
@@ -9,6 +11,8 @@
 #include <boost/accumulators/statistics/median.hpp>
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
+#include <chrono>
+#include <thread>
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -16,11 +20,26 @@
 #include <iterator>
 #include <map>
 
+
+// LCM DEFS TO SEND DATA TO A BOTGUI 
+#define MULTICAST_URL "udpm://239.255.76.67:7667?ttl=2"
+#define MAP_2GUI_CHANNEL "SLAM_MAP"
+#define PATH_CHANNEL "CONTROLLER_PATH"
+
+// ARGUMENT VARIABLES
+bool useGui;                // Global Variable for using GUI 
+bool animatePath;
+int repeatTimes;            // Global Variable that sets number of repeat times, obtained from 
+int pauseTime;           // Time to wait between executions of different cases
+int selected_test;
+
+// Setup Lcm
+lcm::LCM lcmConnection(MULTICAST_URL); 
+
 /*
 * timing_info_t stores the timing information for the tests that are run.
 */
 typedef std::map<std::string, std::vector<int64_t>> timing_info_t;
-int gNumTestRepeats = 1;
 timing_info_t gSuccess;     // Time to successfully find paths  HACK -- don't put global variables in your own code!
 timing_info_t gFail;        // Time to find failures  HACK -- don't put global variables in your own code!
 
@@ -48,30 +67,71 @@ void print_timing_info(timing_info_t& info);
 
 int main(int argc, char** argv)
 {
-    if(argc > 1)
-    {
-        gNumTestRepeats = std::max(std::atoi(argv[1]), 1);
-        std::cout << "Running astar_test with " << gNumTestRepeats << " repeats for each planning problem.\n";
+
+    const char* numRepeatsArg = "num-repeats";
+    const char* useGuiArg = "use-gui";
+    const char* pauseTimeArg = "pause-time";
+    const char* animatePathArg = "animate-path";
+    const char* testSelectArg = "test-num";
+    
+    // Handle Options
+    getopt_t *gopt = getopt_create();
+    getopt_add_bool(gopt, 'h', "help", 0, "Show this help"); 
+    getopt_add_bool(gopt, '\0', useGuiArg, 0, "Flag to send lcm messages with pose and grid data. Have ./botgui running to display them.");
+    getopt_add_bool(gopt, '\0', animatePathArg, 1, "Flag to animate the path formation in the order that is_valid_cell follows");
+    getopt_add_int(gopt, '\0', numRepeatsArg, "1", "Number of times to repeat the A* .");
+    getopt_add_int(gopt, '\0', pauseTimeArg, "2", "Time [s] to pause the A* test for each tested pair of start and goal in each map");
+    getopt_add_int(gopt, '\0', testSelectArg, "6", "[0-6] Number corresponding of case to test. Leave at 6 to test all cases");
+
+    // PRINT HELP IF FAILED TO PARSE STRING, OR IF SENT --help ARGUMENT
+    if (!getopt_parse(gopt, argc, argv, 1)  || getopt_get_bool(gopt, "help")) {
+        printf("Usage: %s [options]", argv[0]);
+        getopt_do_usage(gopt);
+        printf("\nMake sure you provide the required Gui flag\n");
+        return 1;
     }
+
+    useGui = getopt_get_bool(gopt, useGuiArg);
+    animatePath = getopt_get_bool(gopt, animatePathArg);    
+    repeatTimes = getopt_get_int(gopt, numRepeatsArg);
+    pauseTime = getopt_get_int(gopt, pauseTimeArg);
+    selected_test = getopt_get_int(gopt, testSelectArg);
+
+    printf("\n%s",std::string(70,'=').c_str());
+    printf("\nTesting your A* with the following settings :\n");
+    printf("Displaying to a botlab gui : %s\n", useGui ? "true" : "false");
+    printf("Displaying path animation : %s\n", animatePath ? "true" : "false");
+    printf("Number of repeats : %d\n", repeatTimes);
+    printf("Pause time in [s] : %d\n", pauseTime);
+    printf("Working on test case : %d\n", selected_test);
+    printf("Call the binary with --help argument passed for options\n");
+    printf("%s\n",std::string(70,'=').c_str());
+    // printf("="*20);
+
+    if(useGui)printf("\n ~~ MAKE SURE YOU ZOOM-OUT IN YOUR GUI TO SEE THE MAP ~~\n");
+    typedef bool (*test_func) (void);
+
+    std::vector<test_func> tests =  
+                                    // {test_empty_grid};
+                                    { test_empty_grid,
+                                                 test_filled_grid,
+                                                 test_narrow_constriction_grid,
+                                                 test_wide_constriction_grid,
+                                                 test_convex_grid,
+                                                 test_maze_grid};
+    std::vector<test_func> selected_func_vec;
+    if(selected_test != 6)
+    {
+
+        selected_func_vec = {tests[selected_test]};
+    }     
     else
     {
-        std::cout << "Running astar_test with " << gNumTestRepeats << " repeats for each planning problem.\nTo change this "
-            << "number, specify the number of repeats on the command-line as:\n  ./astar_test <num repeats>  \nwhere "
-            << "num_repeats is an integer > 0.\n";
+        selected_func_vec = tests;
     }
     
-    typedef bool (*test_func) (void);
-    std::vector<test_func> tests = { 
-        test_empty_grid,
-        test_filled_grid,
-        test_narrow_constriction_grid,
-        test_wide_constriction_grid,
-        test_convex_grid,
-        test_maze_grid
-    };
-    
     std::size_t numPassed = 0;
-    for(auto& t : tests)
+    for(auto& t : selected_func_vec)
     {
         if(t())
         {
@@ -85,14 +145,14 @@ int main(int argc, char** argv)
     std::cout << "\nTiming information for failed planning attempts:\n";
     print_timing_info(gFail);
     
-    if(numPassed != tests.size())
+    if(numPassed != selected_func_vec.size())
     {
-        std::cout << "\n\nINCOMPLETE: Passed " << numPassed << " of " << tests.size() 
+        std::cout << "\n\nINCOMPLETE: Passed " << numPassed << " of " << selected_func_vec.size() 
         << " tests. Keep debugging and testing!\n";
     }
     else
     {
-        std::cout << "\n\nCOMPLETE! All " << tests.size() << " were passed! Good job!\n";
+        std::cout << "\n\nCOMPLETE! All " << selected_func_vec.size() << " were passed! Good job!\n";
     }
     
     return 0;
@@ -141,7 +201,14 @@ bool test_saved_poses(const std::string& mapFile, const std::string& posesFile, 
     
     OccupancyGrid grid;
     grid.loadFromFile(mapFile);
-    
+
+    // SEND MAP OVER LCM IF FLAG IS SENT IN
+    if(useGui)
+    {
+        auto mapMessage = grid.toLCM();
+        lcmConnection.publish(MAP_2GUI_CHANNEL, &mapMessage);
+    }
+
     std::ifstream poseIn(posesFile);
     if(!poseIn.is_open())
     {
@@ -160,7 +227,7 @@ bool test_saved_poses(const std::string& mapFile, const std::string& posesFile, 
     bool shouldExist;
     
     MotionPlannerParams plannerParams;
-    plannerParams.robotRadius = 0.1;
+    plannerParams.robotRadius = 0.05;
     
     MotionPlanner planner(plannerParams);
     planner.setMap(grid);
@@ -172,7 +239,7 @@ bool test_saved_poses(const std::string& mapFile, const std::string& posesFile, 
         poseIn >> start.x >> start.y >> goal.x >> goal.y >> shouldExist;
         
         robot_path_t path = timed_find_path(start, goal, planner, testName);
-        
+        if(!animatePath && useGui) lcmConnection.publish(PATH_CHANNEL, &path); // Immediately print out path if no animation flag is sent in
         // See if the generated path was valid
         bool foundPath = path.path_length > 1;
         // The goal must be the same position as the end of the path if there was success
@@ -215,7 +282,12 @@ bool test_saved_poses(const std::string& mapFile, const std::string& posesFile, 
                 std::cout << "Correctly found no path between start and goal: " << start << " -> " << goal << "\n";
                 ++numCorrect;
             }
+            if(useGui) lcmConnection.publish(PATH_CHANNEL, &path); 
         }
+
+        // THIS IS WHERE WE PAUSE
+        std::chrono::seconds sleep_duration(pauseTime);
+        std::this_thread::sleep_for(sleep_duration);
     }
     
     if(numCorrect == numGoals)
@@ -238,7 +310,7 @@ robot_path_t timed_find_path(const pose_xyt_t& start,
 {
     // Perform each search many times to get better timing information
     robot_path_t path;
-    for(int n = 0; n < gNumTestRepeats; ++n)
+    for(int n = 0; n < repeatTimes; ++n)
     {
         int64_t startTime = utime_now();
         path = planner.planPath(start, end);
@@ -253,7 +325,9 @@ robot_path_t timed_find_path(const pose_xyt_t& start,
             gFail[testName].push_back(endTime - startTime);
         }
     }
+
     
+
     return path;
 }
 
@@ -266,15 +340,28 @@ bool is_valid_path(const robot_path_t& path, double robotRadius, const Occupancy
         return false;
     }
     
+    robot_path_t printpath;
+    printpath.path_length=1;
+
     // Look at each position in the path, along with any intermediate points between the positions to make sure they are
     // far enough from walls in the occupancy grid to be safe
+    std::chrono::milliseconds sleep_duration(200);
     for(auto p : path.path)
-    {
+    {   
+        // Displaying animated path while looping over its cells that are being checked
         auto cell = global_position_to_grid_cell(Point<float>(p.x, p.y), map);
         if(!is_safe_cell(cell.x, cell.y, robotRadius, map))
         {
             return false;
         }
+        if(animatePath && useGui) 
+        {
+            printpath.path.push_back(p);
+            printpath.path_length = printpath.path.size();
+            lcmConnection.publish(PATH_CHANNEL, &printpath);
+            std::this_thread::sleep_for(sleep_duration);
+        }
+
     }
     
     return true;

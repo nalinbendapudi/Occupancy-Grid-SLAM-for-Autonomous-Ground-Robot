@@ -28,7 +28,7 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
     {
         for(int x = 0; x < map.widthInCells(); ++x)
         {
-            if (map.logOdds(x,y) > 0) obstacle_idx.push_back(y*map.widthInCells()+x);
+            if (map.logOdds(x,y) >= 0) obstacle_idx.push_back(y*map.widthInCells()+x);
         }
     }
     
@@ -52,12 +52,10 @@ void ObstacleDistanceGrid::setDistances(const OccupancyGrid& map)
                 {
                     int y_obs = (*it) / map.widthInCells();
                     int x_obs = (*it) % map.widthInCells();
-                    float distance = metersPerCell_*sqrt(((x_obs-x)*(x_obs-x)+(y_obs-y)*(y_obs-y)));
+                    float distance = std::max(metersPerCell_*sqrt(1.0*((x_obs-x)*(x_obs-x)+(y_obs-y)*(y_obs-y)))-metersPerCell_,0.0);
                     if (distance < minDistance) minDistance = distance;
                 }
             }
-
-
 
 
             

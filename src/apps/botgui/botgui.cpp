@@ -113,7 +113,7 @@ int BotGui::onMouseEvent(vx_layer_t* layer,
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &path);
     }
     // If an Right-click, send a target to the A* planner
-    else if((event->button_mask & VX_BUTTON3_MASK)) //  && (event->modifiers == 0)
+    else if((event->button_mask & VX_BUTTON3_MASK)) // && (event->modifiers == 0)
     {
         std::cout << "Planning path to " << worldPoint << "...";
         int64_t startTime = utime_now();
@@ -248,14 +248,16 @@ void BotGui::render(void)
         draw_laser_scan(laser_, slamPose_, vx_green, laserBuf);
     }
     vx_buffer_swap(laserBuf);
-    
-    // Draw the current path if requested
+
+
+     // Draw the current path if requested
     vx_buffer_t* pathBuf = vx_world_get_buffer(world_, "path");
     if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(showPathCheck_)))
     {
         draw_path(path_, vx_forest, pathBuf);
     }
     vx_buffer_swap(pathBuf);
+
     
     // Draw all active poses
     vx_buffer_t* poseBuf = vx_world_get_buffer(world_, "poses");
@@ -269,7 +271,7 @@ void BotGui::render(void)
             
             if(!trace.trace.empty())
             {
-                draw_robot(trace.trace.back(), trace.color, poseBuf);
+                draw_robot(trace.trace.back(), trace.color, trace.body_color, poseBuf);
             }
         }
     }
@@ -277,9 +279,10 @@ void BotGui::render(void)
     // If the SLAM_POSE has been assigned a color, then draw it using that color
     if(traces_.find(SLAM_POSE_CHANNEL) != traces_.end())
     {
-        draw_robot(slamPose_, traces_[SLAM_POSE_CHANNEL].color, poseBuf);
+        draw_robot(slamPose_, traces_[SLAM_POSE_CHANNEL].color, traces_[SLAM_POSE_CHANNEL].body_color, poseBuf);
     }
     vx_buffer_swap(poseBuf);
+   
     
     // Draw the particles if requested
     vx_buffer_t* particleBuf = vx_world_get_buffer(world_, "particles");
@@ -380,9 +383,17 @@ void BotGui::addPose(const pose_xyt_t& pose, const std::string& channel)
         Trace trace;
         trace.trace.addPose(pose);
         trace.checkbox = gtk_check_button_new_with_label(channel.c_str());
-        trace.color = traceColors_[nextColorIndex_];
-        nextColorIndex_ = (nextColorIndex_ + 1) % traceColors_.size();
         
+        
+        //Color Selection per Channel
+        if(channel == SLAM_POSE_CHANNEL) {trace.body_color = vx_yellow; trace.color = vx_blue;}
+        else if(channel == ODOMETRY_CHANNEL){trace.body_color = vx_red; trace.color = vx_olive;}
+        else if(channel == TRUE_POSE_CHANNEL){trace.body_color = vx_gray; trace.color = vx_orange;}
+        else {
+            trace.color = traceColors_[nextColorIndex_];
+            trace.body_color = traceColors_[(nextColorIndex_ + 1) % traceColors_.size()];
+            nextColorIndex_ = (nextColorIndex_ + 1) % traceColors_.size();
+        }
         // If the new trace is TRUE_POSE_CHANNEL, then the frame transform of odometry needs to be updated
         if(channel == TRUE_POSE_CHANNEL)
         {
@@ -593,27 +604,7 @@ void BotGui::createGuiLayout(GtkWidget* window, GtkWidget* vxCanvas)
     
     GtkWidget* dataSeparator = gtk_hseparator_new();
     gtk_box_pack_start(GTK_BOX(optionsBox_), dataSeparator, FALSE, TRUE, 0);
-    
-    //////////  Sliders for adjusting the commanded speed  ////////////
-    GtkWidget* cmdLabel = gtk_label_new("Command Speed:");
-    gtk_box_pack_start(GTK_BOX(optionsBox_), cmdLabel, FALSE, TRUE, 0);
-    
-    cmdSlider_ = gtk_hscale_new_with_range(0.0, 1.0, 0.01);
-    gtk_scale_set_digits(GTK_SCALE(cmdSlider_), 2);
-    gtk_range_set_value(GTK_RANGE(cmdSlider_), 0.6);
-    gtk_box_pack_start(GTK_BOX(optionsBox_), cmdSlider_, FALSE, TRUE, 0);
-    
-    GtkWidget* trimLabel = gtk_label_new("Right Wheel Trim: (%)");
-    gtk_box_pack_start(GTK_BOX(optionsBox_), trimLabel, FALSE, TRUE, 0);
-    
-    trimSlider_ = gtk_hscale_new_with_range(-50.0, 50.0, 1.0);
-    gtk_scale_set_digits(GTK_SCALE(trimSlider_), 2);
-    gtk_range_set_value(GTK_RANGE(trimSlider_), 0.0);
-    gtk_box_pack_start(GTK_BOX(optionsBox_), trimSlider_, FALSE, TRUE, 0);
-    
-    GtkWidget* cmdSeparator = gtk_hseparator_new();
-    gtk_box_pack_start(GTK_BOX(optionsBox_), cmdSeparator, FALSE, TRUE, 0);
-    
+
     //////////////   Area where pose traces will be added   ////////////////
     GtkWidget* traceLabel = gtk_label_new("Available Pose Traces:");
     gtk_box_pack_start(GTK_BOX(optionsBox_), traceLabel, FALSE, TRUE, 0);

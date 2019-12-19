@@ -77,6 +77,7 @@ private:
         PoseTrace trace;
         GtkWidget* checkbox;
         const float* color;
+        const float* body_color;
     };
     
     std::vector<OccupancyGrid> wifi_maps;

@@ -1,5 +1,6 @@
 #include <apps/botgui/botgui.hpp>
 #include <thread>
+#include <unistd.h>
 
 int main(int argc, char** argv)
 {
@@ -13,6 +14,5 @@ int main(int argc, char** argv)
     });
     
     gui.run();
-    
     return 0;
 }

@@ -30,13 +30,29 @@ struct SearchParams
 };
 
 // Define a structure for a state in configuration space
+// struct Node
+// {   
+//     pose_xyt_t parent;
+//     pose_xyt_t self;
+//     double g; // cost from start
+//     double f; // total cost value, aka priority
+// };
+
 struct Node
 {   
-    pose_xyt_t parent;
-    pose_xyt_t self;
+    Point<int> parent;
+    Point<int> self;
     double g; // cost from start
     double f; // total cost value, aka priority
 };
+
+struct map_point
+{
+    Point<int> parent;
+    int explored = 0;
+};
+
+
 
 struct compare_f{
     bool operator()(const Node& a, const Node& b){
@@ -61,9 +77,5 @@ robot_path_t search_for_path(pose_xyt_t start,
                              const SearchParams& params);
 
 void round_theta(float& theta);
-
-bool isObstacleMiddle(const pose_xyt_t& start, const pose_xyt_t& end, const ObstacleDistanceGrid& distances, const SearchParams& params);
-static std::vector<Point<int>> bresenham(const Point<int>& start, const Point<int>& end, const ObstacleDistanceGrid& distances);
-
 
 #endif // PLANNING_ASTAR_HPP

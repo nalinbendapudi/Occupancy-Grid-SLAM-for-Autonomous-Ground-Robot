@@ -256,6 +256,8 @@ void OccupancyGridSLAM::updateLocalization(void)
         
         auto particles = filter_.particles();
 
+        std::cout << "\n\nParticles Numbers: " << particles.num_particles << "\n\n" << std::endl;
+
         lcm_.publish(SLAM_POSE_CHANNEL, &currentPose_);
         lcm_.publish(SLAM_PARTICLES_CHANNEL, &particles);
 
