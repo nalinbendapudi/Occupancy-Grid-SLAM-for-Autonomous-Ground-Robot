@@ -22,7 +22,7 @@ struct frontier_t;
 * \param    color       Color to draw the robot
 * \param    buffer      Buffer to add the robot object to
 */
-void draw_robot(const pose_xyt_t& pose, const float color[4], vx_buffer_t* buffer);
+void draw_robot(const pose_xyt_t& pose, const float color[4],const float body_color[4], vx_buffer_t* buffer);
 
 /**
 * draw_pose_trace draws the trace of robot poses as a sequence of connected line segments. A line is drawn between

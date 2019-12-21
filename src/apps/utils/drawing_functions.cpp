@@ -15,20 +15,25 @@
 #include <vx/vx_world.h>
 #include <vx/vx_codes.h>
 #include <vx/vxo_chain.h>
+#include <vx/vx_colors.h>
 #include <vx/vxo_box.h>
 #include <vx/vxo_image.h>
 #include <vx/vxo_lines.h>
 #include <vx/vxo_mat.h>
 #include <vx/vxo_mesh.h>
 #include <vx/vxo_robot.h>
+#include <vx/vxo_circle.h>
 #include <vx/vxo_points.h>
 
 
 
 
-void draw_robot(const pose_xyt_t& pose, const float* color, vx_buffer_t* buffer)
+void draw_robot(const pose_xyt_t& pose, const float* color,  const float* body_color, vx_buffer_t* buffer)
 {
     ////////////////// TODO: Draw robot at the pose using vxo_robot ////////////////////////////
+    vx_buffer_add_back(buffer, vxo_chain(vxo_mat_translate3(pose.x, pose.y, 0.0),
+                                         vxo_mat_scale(0.1f),
+                                         vxo_circle(vxo_mesh_style(body_color))));
     
     vx_buffer_add_back(buffer, vxo_chain(vxo_mat_translate3(pose.x, pose.y, 0.0),
                                          vxo_mat_rotate_z(pose.theta),
@@ -148,6 +153,10 @@ void draw_path(const robot_path_t& path, const float* color, vx_buffer_t* buffer
     // Draw the path as line segments between target poses, which are drawn as little robots
     for(auto& pose : path.path)
     {
+        float wypnt_color[] ={ 0.0f, 1.0f, 1.0f, 0.4f}; //Define waypoints with clear cyan color
+        vx_buffer_add_back(buffer, vxo_chain(vxo_mat_translate3(pose.x, pose.y, 0.0),
+                                         vxo_mat_scale(0.1f),
+                                         vxo_circle(vxo_mesh_style(wypnt_color))));
         vx_buffer_add_back(buffer, vxo_chain(vxo_mat_translate3(pose.x, pose.y, 0.0),
                                              vxo_mat_scale(0.05f),
                                              vxo_box(vxo_mesh_style(color))));

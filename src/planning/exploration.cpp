@@ -29,18 +29,12 @@ Exploration::Exploration(int32_t teamNumber,
 , haveHomePose_(false)
 , lcmInstance_(lcmInstance)
 , pathReceived_(false)
-, waiting_for_all_blocks(false)
-, waiting_for_close_blocks(false)
-, waiting_for_arm(false)
-, picking_block(false)
-, putting_block(false)
 {
     assert(lcmInstance_);   // confirm a nullptr wasn't passed in
     
     lcmInstance_->subscribe(SLAM_MAP_CHANNEL, &Exploration::handleMap, this);
     lcmInstance_->subscribe(SLAM_POSE_CHANNEL, &Exploration::handlePose, this);
     lcmInstance_->subscribe(MESSAGE_CONFIRMATION_CHANNEL, &Exploration::handleConfirmation, this);
-    lcmInstance_->subscribe(BLOCK_LIST_CHANNEL, &Exploration::handleBlockList, this);
     
     // Send an initial message indicating that the exploration module is initializing. Once the first map and pose are
     // received, then it will change to the exploring map state.
@@ -77,86 +71,6 @@ bool Exploration::exploreEnvironment()
     
     // If the state is completed, then we didn't fail
     return state_ == exploration_status_t::STATE_COMPLETED_EXPLORATION;
-}
-
-void Exploration::lookForBlocks(bool in_range) {
-    mbot_arm_cmd_t cmd;
-    cmd.utime = 0;
-    if (in_range) {
-        cmd.mbot_cmd = mbot_arm_cmd_t::DETECT_BLOCK_IN_RANGE;
-    } else {
-        cmd.mbot_cmd = mbot_arm_cmd_t::DETECT_BLOCKS;
-    }
-
-    lcmInstance_->publish(ARM_CMD_CHANNEL, &cmd);
-
-    if (in_range) {
-        waiting_for_close_blocks = true;
-        while (waiting_for_close_blocks) {
-            usleep(10000);
-        }
-    } else {
-        waiting_for_all_blocks = true;
-        while (waiting_for_all_blocks) {
-            usleep(10000);
-        }
-    }
-}
-
-void Exploration::grabBlock() {
-    // TODO have some logic to ensure that we only grab when ready
-    mbot_arm_cmd_t grab_cmd;
-    grab_cmd.utime = 0;
-    grab_cmd.mbot_cmd = mbot_arm_cmd_t::ATTEMPT_GRASP;
-
-    waiting_for_arm = true;
-    lcmInstance_->publish(ARM_CMD_CHANNEL, &grab_cmd);
-    while (waiting_for_arm) {
-        usleep(10000);
-    }
-}
-
-void Exploration::handleBlockList(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const mbot_arm_block_list_t* block_list) {
-    // TODO this is called when we get a response from DETECT_BLOCKS.
-    // in here, we should store all blocks that we received in world coordinates somewhere (and then go to those coordinates)
-    if (waiting_for_all_blocks) {
-        waiting_for_all_blocks = false;
-        std::cout << "got block list" << std::endl;
-        for (const mbot_arm_block_t &block : block_list->blocks) {
-            pose_xyt_t robot_frame_block_pose;
-            robot_frame_block_pose.utime = 0;
-            robot_frame_block_pose.x = 0.001*(currentPose_.x + std::cos(currentPose_.theta) * block.pose.x);
-            robot_frame_block_pose.y = 0.001*(currentPose_.y + std::sin(currentPose_.theta) * block.pose.y);
-            robot_frame_block_pose.theta = 0;
-            known_blocks[block.tag_id] = robot_frame_block_pose;
-            // std::cout << "current pose theta: " << currentPose_.theta << std::endl;
-            std::cout << "(" << robot_frame_block_pose.x << " , " << robot_frame_block_pose.y << ")" << std::endl;
-            // std::cout << "(" << block.pose.x << " , " << block.pose.y << ")" << std::endl;
-        }
-    }
-    // TODO this is called when we get a response from DETECT_BLOCKS_IN_RANGE or from ATTEMPT_GRAB. We may need to add additional logic
-    if (waiting_for_close_blocks) {
-        waiting_for_close_blocks = false;
-        nearbyBlocks = block_list->blocks;
-    }
-    if (waiting_for_arm) {
-        if (block_list->blocks.size() == nearbyBlocks.size()) {
-            mbot_arm_cmd_t grab_cmd;
-            grab_cmd.utime = 0;
-            grab_cmd.mbot_cmd = mbot_arm_cmd_t::ATTEMPT_GRASP;
-
-            waiting_for_arm = true;
-            lcmInstance_->publish(ARM_CMD_CHANNEL, &grab_cmd);
-        } else {
-            // TODO this will only work if only one block is in this picture
-            if (nearbyBlocks.size() > 1) {
-                std::cout << "You gotta write code to handle the multiple block case" << std::endl;
-            }
-            known_blocks.erase(nearbyBlocks[0].tag_id);
-            waiting_for_arm = false;
-        }
-        // TODO now we need to drive back and drop off
-    }
 }
 
 void Exploration::handleMap(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const occupancy_grid_t* map)
@@ -283,11 +197,11 @@ void Exploration::executeStateMachine(void)
 
         std::cout << "INFO: Exploration: A new path was created on this iteration. Sending to Mbot:\n";
 
-        // std::cout << "path timestamp: " << currentPath_.utime << "\npath: ";
+        std::cout << "path timestamp: " << currentPath_.utime << "\npath: ";
 
-        // for(auto pose : currentPath_.path){
-        //     std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
-        // }std::cout << "\n";
+        for(auto pose : currentPath_.path){
+            std::cout << "(" << pose.x << "," << pose.y << "," << pose.theta << "); ";
+        }std::cout << "\n";
 
         lcmInstance_->publish(CONTROLLER_PATH_CHANNEL, &currentPath_);
 
@@ -312,21 +226,6 @@ int8_t Exploration::executeInitializing(void)
     
     return exploration_status_t::STATE_EXPLORING_MAP;
 }
-
-// int8_t Exploration::executePickingBlock(bool initialize)
-// {
-//     if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.2){
-//         float theta = atan2(currentTarget_.y - currentPose_.y, currentTarget_.x - currentPose_.x);
-//         if(abs(currentPose_.theta-theta)>0.1){
-//             robot_path_t turning;
-//             turning.path.push_back(currentPose_);
-//             pose_xyt_t turned_pose = currentPose_;
-//             turned_pose.theta = theta;
-//             turning.path.push_back(turned_pose);
-
-//         }
-//     }
-// }
 
 
 int8_t Exploration::executeExploringMap(bool initialize)
@@ -354,7 +253,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
 
     // std::cout << "Number of frontiers: " << frontiers_.size() << std::endl;
     
-    if(!frontiers_.empty() && !picking_block && !putting_block){
+    if(!frontiers_.empty()){
         prev_frontier_size = frontiers_.size();
         std::cout << "frontier not empty" << std::endl;
 
@@ -363,56 +262,11 @@ int8_t Exploration::executeExploringMap(bool initialize)
         // Point<float> rand_point = rand_frontier.cells[rand()%(rand_frontier.cells.size())];
         // std::cout << "frontier point: " << rand_point.x << " , " << rand_point.y << std::endl;
 
-        // currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
-
         // plan the path to frontier
-        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.4){
-            lookForBlocks(false);
-            if(!known_blocks.empty()){
-                currentTarget_ = (*(known_blocks.begin())).second;
-                std::cout << "setting block pose: " << currentTarget_.x << " , " << currentTarget_.y << std::endl;
-                
-                if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.2){
-                    currentPath_.path.clear();
-                    currentPath_.path_length = currentPath_.path.size();
-                } 
-                else currentPath_ = planner_.planPathBackHome(currentPose_,currentTarget_);
-                // currentPath_ = planner_.planPathBackHome(currentPose_,currentTarget_);
-
-                std::cout << "crash here" << std::endl;
-
-                picking_block = true;
-            }
-            else{
-                std::cout << "replan a path to frontier" << std::endl;
-                currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
-            } 
+        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.3){
+            currentPath_ = planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
         }
         
-    }
-    else if(picking_block){
-        // if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) > 0.1){
-        //     currentTarget_.theta = atan2(currentTarget_.y-currentPose_.y, currentTarget_.x-currentPose_.x);
-        //     currentPath_ = planner_.planPathBackHome(currentPose_,currentTarget_);
-        // }
-        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.2){
-            std::cout << "reach block place" << std::endl;
-            grabBlock();
-            std::cout << "going back home" << std::endl;
-            currentTarget_ = homePose_;
-            currentPath_ = planner_.planPathBackHome(currentPose_,currentTarget_);
-            picking_block = false;
-            putting_block = true;
-        }
-    }
-    else if(putting_block){
-        if(sqrt((currentPose_.x-currentTarget_.x)*(currentPose_.x-currentTarget_.x) + (currentPose_.y-currentTarget_.y)*(currentPose_.y-currentTarget_.y)) < 0.1){
-            std::cout << "putting block" << std::endl;
-            grabBlock();
-            std::cout << "keep exploring" << std::endl;
-            planner_.planPathToFrontier(frontiers_,currentPose_,currentTarget_);
-            putting_block = false;
-        }
     }
     
     /////////////////////////   Create the status message    //////////////////////////
@@ -428,7 +282,7 @@ int8_t Exploration::executeExploringMap(bool initialize)
         status.status = exploration_status_t::STATUS_COMPLETE;
     }
     // Else if there's a path to follow, then we're still in the process of exploring
-    else if(currentPath_.path.size() > 1 || picking_block || putting_block)
+    else if(currentPath_.path.size() > 1)
     {
         status.status = exploration_status_t::STATUS_IN_PROGRESS;
     }
